@@ -1,9 +1,13 @@
 var bot_name = "spica";
-var bot_icon = "https://pbs.twimg.com/profile_images/847612503374700548/T4PycpQw.jpg";
+var bot_icon = PropertiesService.getScriptProperties().getProperty('JPG');
 var token = PropertiesService.getScriptProperties().getProperty('SLACK_ACCESS_TOKEN');
 var verify_token = PropertiesService.getScriptProperties().getProperty('VERIFY_TOKEN');
 var spread_url = PropertiesService.getScriptProperties().getProperty('SP_URL');
-//ƒƒbƒZ[ƒW‚ğ‘—‚é
+var docomo_api = PropertiesService.getScriptProperties().getProperty('API_DOCOMO');
+var docomo_api_q = PropertiesService.getScriptProperties().getProperty('API_DOCOMO_Q');
+var address = PropertiesService.getScriptProperties().getProperty('ADDRESS');
+
+//ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’é€ã‚‹
 function postSlackMessage(content) {
   
   var slackApp = SlackApp.create(token); 
@@ -16,49 +20,56 @@ function postSlackMessage(content) {
   slackApp.postMessage(options.channelId, options.message, {username: options.userName,icon_url:options.icon_url});
 }
 
-//cellŠÖ”
-function cells(i,j){
-  var ss = SpreadsheetApp.openByUrl(spread_url);
-  var sheet = ss.getSheets()[0];
-  return sheet.getSheetValues(i,j,1,1);
+//ãƒ‰ã‚³ãƒ¢API
+function getDocomoMessage(mes) {
+  //æ¤œç´¢æ©Ÿèƒ½
+  if(mes.slice(0,1)=="ï¼Ÿ" || mes.slice(0,1)=="?"){
+    mes.substr(1);
+    var dialogue_options = {
+    'utt': mes
+    }
+    var url = docomo_api_q + encodeURI(mes);
+    var response = UrlFetchApp.fetch(url);
+    var content = JSON.parse(response.getContentText());
+    var message = content["message"]["textForDisplay"];
+    message = message.replace( /ä¸€ä½ã¯ã€/g , "" ) ;
+    
+  }else{
+    var dialogue_options = {
+      'utt': mes
+    }
+    var options = {
+      'method': 'POST',
+      'contentType': 'text/json',
+      'payload': JSON.stringify(dialogue_options)
+    };
+
+    var response = UrlFetchApp.fetch("https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY=677844714c58442f50554f53706b5966794b33795631707357446d3778372f664f3556564a4e4a55597a30", options);
+    var content = JSON.parse(response.getContentText());
+    var message = content.utt;
+  }
+  return message;
 }
 
-//ŒˆZƒŠƒXƒg
-function getList(){
-  postSlackMessage("y‘Y‘Šzz\n" + cells(1,22) + "‰~ (‘OŒ”ä "@+ cells(3,22) +
-  "‰~)\ny¡Œ‘û“üz\n" + cells(4,22) + "‰~ (‘OŒ”ä "@+ cells(6,22) + 
-  "‰~)\ny¡Œ‘xoz\n" + cells(7,22) + "‰~ (‘OŒ”ä "@+ cells(9,22) + 
-  "‰~)\n\nyxo“à–óz\nH”ï@F" + cells(3,16) + "‰~ (‘OŒ " + cells(3,14) + 
-  "‰~)\nŒğÛ”ïF" + cells(2,16) + "‰~ (‘OŒ " + cells(2,14) +
-  "‰~)\nG‰İ@F" + cells(4,16) + "‰~ (‘OŒ " + cells(4,14) + 
-  "‰~)\nŠw–â@F" + cells(5,16) + "‰~ (‘OŒ " + cells(5,14) + 
-  "‰~)\nŒğ’Ê@F" + cells(6,16) + "‰~ (‘OŒ " + cells(6,14) + 
-  "‰~)\nï–¡@F" + cells(7,16) + "‰~ (‘OŒ " + cells(7,14) + 
-  "‰~)\nŒõ”M”ïF" + cells(1,16) + "‰~ (‘OŒ " + cells(1,14) + 
-  "‰~)\n’™‹à@F" + cells(8,16) + "‰~ (‘OŒ " + cells(8,14) + 
-  "‰~)\n‚»‚Ì‘¼F" + cells(9,16) + "‰~ (‘OŒ " + cells(9,14) + 
-  "‰~)\n\nyû“ü“à–óz\nd‘—‚èF" + cells(1,20) + "‰~ (‘OŒ " + cells(1,18) +
-  "‰~)\n‹‹—^@F" + cells(2,20) + "‰~ (‘OŒ " + cells(2,18) +
-  "‰~)\n—Õ@F" + cells(3,20) + "‰~ (‘OŒ " + cells(3,18) + "‰~)");
-}
 
+//å¤©æ°—ã‹ãˆã™
 function getWeather(){
-  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010"); // “Œ‹
-    // ƒGƒ‰[‚¾‚Á‚½‚çˆ—‚ğI—¹
+  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010"); // æ±äº¬
+    // ã‚¨ãƒ©ãƒ¼ã ã£ãŸã‚‰å‡¦ç†ã‚’çµ‚äº†
   if(weather.getResponseCode() != 200){
       return false;
   }
   var json = JSON.parse(weather.getContentText());
-  var today = json["forecasts"][0]["telop"]; // ¡“ú‚Ì“V‹C
-  var tomorrow = json["forecasts"][1]["telop"]; // –¾“ú‚Ì“V‹C
-  var message = " ¡“ú‚Íu" + today + "vA–¾“ú‚Íu" + tomorrow + "v‚Å‚·‚æ`B";
+  var today = json["forecasts"][0]["telop"]; // ä»Šæ—¥ã®å¤©æ°—
+  var tomorrow = json["forecasts"][1]["telop"]; // æ˜æ—¥ã®å¤©æ°—
+  var message = " ä»Šã®å¤©æ°—ã¯ã€Œ" + today + "ã€ã€æ˜æ—¥ã¯ã€Œ" + tomorrow + "ã€ã§ã™ã‚ˆï½ã€‚";
   return message;
 }
 
-//ƒ†[ƒU[‚Ì“Še‚É”½‰‚·‚é
+//ãƒ¦ãƒ¼ã‚¶ãƒ¼ã®æŠ•ç¨¿ã«åå¿œã™ã‚‹
 function doPost(e) {
   
-  //“Še‚Ì”FØ
+  //æŠ•ç¨¿ã®èªè¨¼
   if (verify_token != e.parameter.token) {
     throw new Error("invalid token.");
   }
@@ -66,113 +77,43 @@ function doPost(e) {
   var app = SlackApp.create(token);
   var ss = SpreadsheetApp.openByUrl(spread_url);
   var sheet = ss.getSheets()[0];
-  //Trigger Words•”•ª‚Ìíœ
+  //Trigger Wordséƒ¨åˆ†ã®å‰Šé™¤
   var text = e.parameter.text.substr(0);
   
   if(e.parameter.user_name=="pandorina463"){
-  
-  if(text.match(/list/) || text.match(/ƒŠƒXƒg/) || text.match(/‚è‚·‚Æ/)){
-    //.listƒRƒ}ƒ“ƒh
-    getList();
-    var message = "‚Á‚ÄŠ´‚¶‚İ‚½‚¢‚Å‚·I"
-  }else if(text.match(/‚Ä‚ñ‚«/) || text.match(/ƒeƒ“ƒL/) || text.match(/tenki/) || text.match(/“V‹C/)){
-    //“V‹C—\•ñ
-    var message = getWeather();
-    //‰ÆŒv•ë
-  }else if(text.match(/‰ÆŒv•ë/) || text.match(/‚©‚¯‚¢‚Ú/)){
-    //.n Item ƒRƒ}ƒ“ƒhixoj
-    sheet.getRange(12, 22).setValue(1);
-    var message = "‰ÆŒv•ë‚ğ‹L˜^‚µ‚½‚¢‚ñ‚Å‚·‚ËB‰½‚ğ‹L˜^‚·‚ê‚Î‚¢‚¢H"
-    
-  }else{
-    if((""+cells(12,22))==1){
-      var text = e.parameter.text.substr(0);
-      sheet.getRange(sheet.getRange("G:G").getValues().filter(String).length+1, 7).setValue(text);
-      //‚Æ‚è‚ ‚¦‚¸xo‚Ì•û‚É“ü—ÍB
-      var Name = cells(sheet.getRange("G:G").getValues().filter(String).length,9)
-    
-      if(Name != "d‘—‚è" && Name != "‹‹—^" && Name != "—Õ"){
-        //‘Y‘Šz‚Ìã‘‚«
-        var oldAssets = Number(cells(1,22));
-        var Assets = Number(cells(1,22)) - Number(cells(sheet.getRange("G:G").getValues().filter(String).length,8));
-        sheet.getRange(1,22).setValue(Assets)
-        sheet.getRange(11,22).setValue(Number(cells(11,22)) + Number(cells(sheet.getRange("G:G").getValues().filter(String).length,8)))
-      
-        //‘—MƒƒbƒZ
-        var message = "u" + text + "v...‚Ó‚Ş‚Ó‚Ş......B\n" + text + "‚Ég‚Á‚½‚Á‚Ä‹L˜^‚µ‚Æ‚­‚æI\ny‘Y‘Šzz\n" + 
-          oldAssets + "->" +Assets +  "‰~\ny¡Œ‘xoz\n" + cells(4,22) + "‰~ (‘OŒ”ä "@+ cells(6,22) + 
-            "‰~)\n\nyxo“à–óz\nH”ï@F" + cells(3,16) + "‰~ (‘OŒ " + cells(3,14) + 
-              "‰~)\nŒğÛ”ïF" + cells(2,16) + "‰~ (‘OŒ " + cells(2,14) + 
-                "‰~)\nG‰İ@F" + cells(4,16) + "‰~ (‘OŒ " + cells(4,14) + 
-                  "‰~)\nŠw–â@F" + cells(5,16) + "‰~ (‘OŒ " + cells(5,14) + 
-                    "‰~)\nŒğ’Ê@F" + cells(6,16) + "‰~ (‘OŒ " + cells(6,14) + 
-                      "‰~)\nï–¡@F" + cells(7,16) + "‰~ (‘OŒ " + cells(7,14) + 
-                        "‰~)\nŒõ”M”ïF" + cells(1,16) + "‰~ (‘OŒ " + cells(1,14) + 
-                          "‰~)\n’™‹à@F" + cells(8,16) + "‰~ (‘OŒ " + cells(8,14) + 
-                            "‰~)\n‚»‚Ì‘¼F" + cells(9,16) + "‰~ (‘OŒ " + cells(9,14) + "‰~)\n"
-      
-      }else{
-        // n ItemƒRƒ}ƒ“ƒhiû“ü)
-        //‚à‚µû“ü‚¾‚Á‚½‚ç’uŠ·
-        sheet.getRange(sheet.getRange("G:G").getValues().filter(String).length, 7).setValue("");
-        sheet.getRange(sheet.getRange("J:J").getValues().filter(String).length+1, 10).setValue(text);
-        
-        var oldAssets = Number(cells(1,22));
-        var Assets = Number(cells(1,22)) + Number(cells(sheet.getRange("J:J").getValues().filter(String).length,11));
-        sheet.getRange(1,22).setValue(Assets)
-      
-      //‘—MƒƒbƒZ
-        var message = "u" + text + "v...‚Ó‚Ş‚Ó‚Ş......B\n" + text + "‚Å‰Ò‚¢‚¾‚Á‚Ä‹L˜^‚µ‚Æ‚­‚æI\ny‘Y‘Šzz\n" + 
-          oldAssets + "->" +Assets  +  "‰~\ny¡Œ‘û“üz\n" + cells(7,22) + "‰~ (‘OŒ”ä "@+ cells(9,22) +
-            "‰~)\n\nd‘—‚èF" + cells(1,20) + "‰~ (‘OŒ " + cells(1,18) +
-              "‰~)\n‹‹—^@F" + cells(2,20) + "‰~ (‘OŒ " + cells(2,18) +
-                "‰~)\n—Õ@F" + cells(3,20) + "‰~ (‘OŒ " + cells(3,18) + "‰~)";
-        
+    if(text.match(/ã¦ã‚“ã/) || text.match(/ãƒ†ãƒ³ã‚­/) || text.match(/tenki/) || text.match(/å¤©æ°—/)){
+      var message = getWeather();
+    }else if(text.match(/ãƒ¡ãƒ¼ãƒ«/) || text.match(/ã‚ãƒ¼ã‚‹/)){
+      var count = getNewGmail();
+      if(count==0){
+        var message = "ãƒ¡ãƒ¼ãƒ«ã¯æ¥ã¦ãªã„ã¿ãŸã„ã§ã™ã‚ˆï½";
       }
-      
-      sheet.getRange(12, 22).setValue(0);
-      
     }else{
-      //‚Ù‚ñ‚Æ‚É‚í‚©‚ñ‚È‚¢
-      var message = "‚²‚ß‚ñ‚È‚³‚¢c‰½‚ğ‚¢‚Á‚Ä‚¢‚é‚Ì‚©‚í‚©‚ç‚È‚­‚Äc";
+      var message = getDocomoMessage(text);
     }
-    
+    return app.postMessage(e.parameter.channel_id, message, {username: bot_name,icon_url: bot_icon});
   }
-  return app.postMessage(e.parameter.channel_id, message, {
-    username: bot_name,
-    icon_url: bot_icon
-  });
-  }
-  
 }
  
-//“V‹C—\•ñin’©
+//æœ
 function doMorning(){
-  var message = "‚¨‚Í‚æ‚¤‚²‚´‚¢‚Ü‚·Ispica‚Å‚·B" + getWeather();
+  var message = "ãŠã¯ã‚ˆã†ã”ã–ã„ã¾ã™ï¼spicaã§ã™ã€‚\n" + getWeather() + "\n";
   postSlackMessage(message)
 }
 
-//‰ÆŒv•ë“ú•ÊƒŒƒ|
-function doEveryday(){
-  var ss = SpreadsheetApp.openByUrl(spread_url);
-  var sheet = ss.getSheets()[0];
-  if(Number(cells(11,22))>2000){
-    postSlackMessage("¡“ú‚àˆê“ú‚¨”æ‚ê‚³‚ÜBŒˆZ‚µ‚É‚«‚Ü‚µ‚½‚æB\ny–{“ú‚Ì‘xoz  " + Number(cells(11,22)) + "‰~ " + "(‘O“ú" + cells(10,22) + "‰~)\nƒ`ƒ‡ƒbƒgg‚¢‰ß‚¬‚©‚ÈH‚ ‚µ‚½‚àŠæ’£‚ë‚¤I");
-  }else{
-    postSlackMessage("¡“ú‚àˆê“ú‚¨”æ‚ê‚³‚ÜBŒˆZ‚µ‚É‚«‚Ü‚µ‚½‚æB\ny–{“ú‚Ì‘xoz  " + Number(cells(11,22)) + "‰~ " + "(‘O“ú" + cells(10,22) + "‰~)\n‚ ‚ñ‚Ü‚µ‚Â‚©‚í‚È‚©‚Á‚½‚ËI‚¨‚â‚·‚İ‚È‚³‚¢B");
+//gmail
+function getNewGmail() {
+  // æœªèª­ã®æŒ‡å®šãƒ©ãƒ™ãƒ« ã‚’æ¤œç´¢
+  var threads = GmailApp.search('is:unread label:Slack');
+  var count = threads.length;
+  if(count!=0){
+    postSlackMessage("ãƒ¡ãƒ¼ãƒ«ãŒ"ã€€+ count + "ä»¶å±Šã„ã¦ã„ã‚‹ã¿ãŸã„ã§ã™ã­");
+    for(var i = 0; i < count; i++) {
+       //slackã«é€šçŸ¥
+        postSlackMessage("\n[ä»¶å]ï¼š" + threads[i].getFirstMessageSubject() + " \n" + threads[i].getPermalink(), "GMAIL");
+        //æ—¢èª­ã«ã™ã‚‹ã€‚
+        threads[i].markRead();
+    }
   }
-  //¡“ú‚ğğ“ú‚Ì—“‚ÉˆÚ‚·
-  sheet.getRange(10, 22).setValue(Number(cells(11,22)))
-  sheet.getRange(11, 22).setValue("")
-}
-
-//‰ÆŒv•ëŒŸƒŒƒ|
-function doMonth(){
-  var ss = SpreadsheetApp.openByUrl(spread_url);
-  var sheet = ss.getSheets()[0];
-  var ss = SpreadsheetApp.openByUrl(spread_url);
-  var sheet = ss.getSheets()[0];
-  postSlackMessage("spica‚Å‚·BŒˆZ•ñ‚Ì“ú‚ª‚â‚Á‚Ä‚Ü‚¢‚è‚Ü‚µ‚½I\n\n");
-  getList();
-  postSlackMessage("\n‚Á‚Ä‚©‚ñ‚¶‚İ‚½‚¢B—ˆŒ‚àŠæ’£‚ë‚¤‚Ë!");
+  return count;
 }
