@@ -78,13 +78,13 @@ function doMorning(){
 //get gmail and post it.
 function getNewGmail() {
   var threads = GmailApp.search('is:unread label:Slack');
-  var count = threads.length;
-  if(count!=0){
-    postSlackMessage("メールが"　+ count + "件届いているみたいですね");
-    for(var i = 0; i < count; i++) {
+  var mail_count = threads.length;
+  if(mail_count!=0){
+    postSlackMessage("メールが"　+ mail_count + "件届いているみたいですね");
+    for(var i = 0; i < mail_count; i++) {
         postSlackMessage("\n[件名]：" + threads[i].getFirstMessageSubject() + " \n" + threads[i].getPermalink(), "GMAIL");
         threads[i].markRead();
     }
   }
-  return count;
+  return mail_count;
 }
