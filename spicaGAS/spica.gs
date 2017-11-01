@@ -7,43 +7,26 @@ var docomo_api = PropertiesService.getScriptProperties().getProperty('API_DOCOMO
 var docomo_api_q = PropertiesService.getScriptProperties().getProperty('API_DOCOMO_Q');
 var address = PropertiesService.getScriptProperties().getProperty('ADDRESS');
 
-//メッセージを送る
+//post slack.
 function postSlackMessage(content) {
-  
   var slackApp = SlackApp.create(token); 
-  var options = {
-    channelId: "#spica",
-    userName: bot_name,
-    message: content,
-    icon_url: bot_icon,
-  };  
+  var options = {channelId: "#spica", userName: bot_name, message: content, icon_url: bot_icon};  
   slackApp.postMessage(options.channelId, options.message, {username: options.userName,icon_url:options.icon_url});
 }
 
-//ドコモAPI
+//docomo api.
 function getDocomoMessage(mes) {
-  //検索機能
   if(mes.slice(0,1)=="？" || mes.slice(0,1)=="?"){
     mes.substr(1);
-    var dialogue_options = {
-    'utt': mes
-    }
+    var dialogue_options = {'utt': mes}
     var url = docomo_api_q + encodeURI(mes);
     var response = UrlFetchApp.fetch(url);
     var content = JSON.parse(response.getContentText());
     var message = content["message"]["textForDisplay"];
-    message = message.replace( /一位は、/g , "" ) ;
-    
+    message = message.replace( /一位は、/g , "" ) ; 
   }else{
-    var dialogue_options = {
-      'utt': mes
-    }
-    var options = {
-      'method': 'POST',
-      'contentType': 'text/json',
-      'payload': JSON.stringify(dialogue_options)
-    };
-
+    var dialogue_options = {'utt': mes}
+    var options = {'method': 'POST', 'contentType': 'text/json', 'payload': JSON.stringify(dialogue_options)};
     var response = UrlFetchApp.fetch("https://api.apigw.smt.docomo.ne.jp/dialogue/v1/dialogue?APIKEY=677844714c58442f50554f53706b5966794b33795631707357446d3778372f664f3556564a4e4a55597a30", options);
     var content = JSON.parse(response.getContentText());
     var message = content.utt;
@@ -51,14 +34,10 @@ function getDocomoMessage(mes) {
   return message;
 }
 
-
-//天気かえす
+//weather forecast
 function getWeather(){
   var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010"); // 東京
-    // エラーだったら処理を終了
-  if(weather.getResponseCode() != 200){
-      return false;
-  }
+  if(weather.getResponseCode() != 200){return false;}
   var json = JSON.parse(weather.getContentText());
   var today = json["forecasts"][0]["telop"]; // 今日の天気
   var tomorrow = json["forecasts"][1]["telop"]; // 明日の天気
@@ -66,20 +45,15 @@ function getWeather(){
   return message;
 }
 
-//ユーザーの投稿に反応する
+//choose post sentence.
 function doPost(e) {
-  
-  //投稿の認証
   if (verify_token != e.parameter.token) {
     throw new Error("invalid token.");
   }
-  
   var app = SlackApp.create(token);
   var ss = SpreadsheetApp.openByUrl(spread_url);
   var sheet = ss.getSheets()[0];
-  //Trigger Words部分の削除
   var text = e.parameter.text.substr(0);
-  
   if(e.parameter.user_name=="pandorina463"){
     if(text.match(/てんき/) || text.match(/テンキ/) || text.match(/tenki/) || text.match(/天気/)){
       var message = getWeather();
@@ -94,24 +68,21 @@ function doPost(e) {
     return app.postMessage(e.parameter.channel_id, message, {username: bot_name,icon_url: bot_icon});
   }
 }
- 
-//朝
+
+//execute every morning.
 function doMorning(){
   var message = "おはようございます！spicaです。\n" + getWeather() + "\n";
   postSlackMessage(message)
 }
 
-//gmail
+//get gmail and post it.
 function getNewGmail() {
-  // 未読の指定ラベル を検索
   var threads = GmailApp.search('is:unread label:Slack');
   var count = threads.length;
   if(count!=0){
     postSlackMessage("メールが"　+ count + "件届いているみたいですね");
     for(var i = 0; i < count; i++) {
-       //slackに通知
         postSlackMessage("\n[件名]：" + threads[i].getFirstMessageSubject() + " \n" + threads[i].getPermalink(), "GMAIL");
-        //既読にする。
         threads[i].markRead();
     }
   }
