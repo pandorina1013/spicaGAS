@@ -36,11 +36,11 @@ function getDocomoMessage(mes) {
 
 //weather forecast
 function getWeather(){
-  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010"); // 東京
+  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010");
   if(weather.getResponseCode() != 200){return false;}
   var json = JSON.parse(weather.getContentText());
-  var today = json["forecasts"][0]["telop"]; // 今日の天気
-  var tomorrow = json["forecasts"][1]["telop"]; // 明日の天気
+  var today = json["forecasts"][0]["telop"];
+  var tomorrow = json["forecasts"][1]["telop"];
   var message = " 今の天気は「" + today + "」、明日は「" + tomorrow + "」ですよ～。";
   return message;
 }
