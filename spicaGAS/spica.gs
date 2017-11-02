@@ -63,8 +63,11 @@ function doPost(e) {
         var message = "メールは来てないみたいですよ～";
       }
     }else if(text.match(/めも/) || text.match(/メモ/)){
-      makeCommit(text.slice(2,10),text)
-      var message = "メモを追加しました～！";
+      const date = new Date();
+      var prop = PropertiesService.getScriptProperties().getProperties();
+      var option = { name: prop.NAME, email: prop.EMAIL };
+      makeCommit(Utilities.formatDate(date, option.tz, "yyyymmddhhmm") ,text)
+      var message = "githubにメモを追加しました～！";
     }else{
       var message = getDocomoMessage(text);
     }
@@ -92,10 +95,13 @@ function getNewGmail() {
   return mail_count;
 }
 
-//execute every modnight.
+//execute every midnight.
 function doMidnight(){
   postSlackMessage("こんばんわ！今日の分、commitしときました。");
-  makeCommit("auto_commit","auto commited.")
+  const date = new Date();
+  var prop = PropertiesService.getScriptProperties().getProperties();
+  var option = { name: prop.NAME, email: prop.EMAIL };
+  makeCommit(Utilities.formatDate(date, option.tz, "yyyymmddhhmm") ,"this is auto commit.")
 }
 
 
@@ -109,10 +115,10 @@ function makeCommit(title, comment) {
 
   var branch = github.getBranch(prop.GITHUB_BRANCH);
   var pTree = github.getTree(branch['commit']['commit']['tree']['sha']);
-  var blob = github.createBlob('# ' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + "\n" + comment);
+  var blob = github.createBlob('# ' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + "\n" + String(comment));
   var data = {
     'tree': pTree['tree'].concat([{
-      'path': 'auto_commit/' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd" + ":" + title) + '.md',
+      'path': 'auto_commit/' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd/" + title) + '.md',
       'mode': '100644',
       'type': 'blob',
       'sha': blob['sha']
@@ -121,4 +127,10 @@ function makeCommit(title, comment) {
   var tree = github.createTree(data);
   var commit = github.createCommit('auto - commit', tree['sha'], branch['commit']['sha']);
   var result = github.updateReference(prop.GITHUB_BRANCH, commit['sha']);
+}
+function test(){
+  const date = new Date();
+  var prop = PropertiesService.getScriptProperties().getProperties();
+  var option = { name: prop.NAME, email: prop.EMAIL };
+  Logger.log(date)
 }
