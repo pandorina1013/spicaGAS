@@ -63,8 +63,8 @@ function doPost(e) {
         var message = "メールは来てないみたいですよ～";
       }
     }else if(text.match(/めも/) || text.match(/メモ/)){
-      makeCommit(text)
-      var message = "メモを追加しました~";
+      makeCommit(text.slice(2,10),text)
+      var message = "メモを追加しました～！";
     }else{
       var message = getDocomoMessage(text);
     }
@@ -95,12 +95,12 @@ function getNewGmail() {
 //execute every modnight.
 function doMidnight(){
   postSlackMessage("こんばんわ！今日の分、commitしときました。");
-  makeCommit("auto commited.")
+  makeCommit("auto_commit","auto commited.")
 }
 
 
 // commit github.
-function makeCommit(comment) {
+function makeCommit(title, comment) {
   var prop = PropertiesService.getScriptProperties().getProperties();
   const date = new Date();
 
@@ -112,7 +112,7 @@ function makeCommit(comment) {
   var blob = github.createBlob('# ' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + "\n" + comment);
   var data = {
     'tree': pTree['tree'].concat([{
-      'path': 'auto_commit/' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + '.md',
+      'path': 'auto_commit/' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd" + ":" + title) + '.md',
       'mode': '100644',
       'type': 'blob',
       'sha': blob['sha']
