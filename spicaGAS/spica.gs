@@ -36,11 +36,11 @@ function getDocomoMessage(mes) {
 
 //weather forecast
 function getWeather(){
-  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010");
+  var weather = UrlFetchApp.fetch("http://weather.livedoor.com/forecast/webservice/json/v1?city=130010"); // 東京
   if(weather.getResponseCode() != 200){return false;}
   var json = JSON.parse(weather.getContentText());
-  var today = json["forecasts"][0]["telop"];
-  var tomorrow = json["forecasts"][1]["telop"];
+  var today = json["forecasts"][0]["telop"]; // 今日の天気
+  var tomorrow = json["forecasts"][1]["telop"]; // 明日の天気
   var message = " 今の天気は「" + today + "」、明日は「" + tomorrow + "」ですよ～。";
   return message;
 }
@@ -62,6 +62,9 @@ function doPost(e) {
       if(count==0){
         var message = "メールは来てないみたいですよ～";
       }
+    }else if(text.match(/めも/) || text.match(/メモ/)){
+      makeCommit(text)
+      var message = "メモを追加しました~";
     }else{
       var message = getDocomoMessage(text);
     }
@@ -88,9 +91,16 @@ function getNewGmail() {
   }
   return mail_count;
 }
+
+//execute every modnight.
+function doMidnight(){
+  postSlackMessage("こんばんわ！今日の分、commitしときました。");
+  makeCommit("auto commited.")
+}
+
+
 // commit github.
-function makeTodaysCommit() {
-  postSlackMessage("こんばんわ～。今日ももうおしまいだしcommitしとくね。");
+function makeCommit(comment) {
   var prop = PropertiesService.getScriptProperties().getProperties();
   const date = new Date();
 
@@ -99,7 +109,7 @@ function makeTodaysCommit() {
 
   var branch = github.getBranch(prop.GITHUB_BRANCH);
   var pTree = github.getTree(branch['commit']['commit']['tree']['sha']);
-  var blob = github.createBlob('# ' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd (EEE)"));
+  var blob = github.createBlob('# ' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + "\n" + comment);
   var data = {
     'tree': pTree['tree'].concat([{
       'path': 'auto_commit/' + Utilities.formatDate(date, option.tz, "yyyy/MM/dd") + '.md',
